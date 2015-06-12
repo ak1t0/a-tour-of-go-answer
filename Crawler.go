@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-  "sync"
+	"sync"
 )
 
 type Fetcher interface {
@@ -18,9 +18,9 @@ var logmu sync.Mutex
 // pages starting with url, to a maximum of depth.
 func Crawl(url string, depth int, fetcher Fetcher) {
 
-  var wg sync.WaitGroup
+	var wg sync.WaitGroup
 
-  if depth <= 0 {
+	if depth <= 0 {
 		return
 	}
 	body, urls, err := fetcher.Fetch(url)
@@ -30,61 +30,60 @@ func Crawl(url string, depth int, fetcher Fetcher) {
 	}
 	fmt.Printf("found: %s %q\n", url, body)
 
-  logmu.Lock()
-  log[url] = body
-  logmu.Unlock()
+	logmu.Lock()
+	log[url] = body
+	logmu.Unlock()
 
 	for _, u := range urls {
-    wg.Add(1)
-    go Crawler(u, depth-1, fetcher, &wg)
-  }
-  wg.Wait()
+		wg.Add(1)
+		go Crawler(u, depth-1, fetcher, &wg)
+	}
+	wg.Wait()
 	return
 }
 
 func Crawler(url string, depth int, fetcher Fetcher,
-             w *sync.WaitGroup) {
-  if depth <= 0 {
-    w.Done()
+	w *sync.WaitGroup) {
+	if depth <= 0 {
+		w.Done()
 		return
 	}
 
-  // previous crawl check
-  logmu.Lock()
-  _, ok := log[url]
-  logmu.Unlock()
-  if ok {
-    w.Done()
-    return
-  }
+	// previous crawl check
+	logmu.Lock()
+	_, ok := log[url]
+	logmu.Unlock()
+	if ok {
+		w.Done()
+		return
+	}
 
 	body, urls, err := fetcher.Fetch(url)
 	if err != nil {
 		fmt.Println(err)
 
-    //add not-found URL to log
-    logmu.Lock()
-    log[url] = body
-    logmu.Unlock()
+		//add not-found URL to log
+		logmu.Lock()
+		log[url] = body
+		logmu.Unlock()
 
-    w.Done()
+		w.Done()
 		return
 	}
 
 	fmt.Printf("found: %s %q\n", url, body)
 
-  logmu.Lock()
-  log[url] = body
-  logmu.Unlock()
+	logmu.Lock()
+	log[url] = body
+	logmu.Unlock()
 
 	for _, u := range urls {
-    w.Add(1)
+		w.Add(1)
 		go Crawler(u, depth-1, fetcher, w)
 	}
-  w.Done()
+	w.Done()
 	return
 }
-
 
 func main() {
 	Crawl("http://golang.org/", 4, fetcher)
